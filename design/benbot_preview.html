@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BENBOT -- full colour preview</title>
+<style>
+  body {
+    background: #0b0d10;
+    color: #d0d0d0;
+    font-family: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 28px;
+    padding: 60px;
+    margin: 0;
+    line-height: 1.05;
+  }
+
+  h1 {
+    font-size: 18px;
+    font-weight: normal;
+    color: #888;
+    letter-spacing: 0.1em;
+    margin: 0 0 40px 0;
+    text-transform: uppercase;
+  }
+
+  .row {
+    display: flex;
+    gap: 80px;
+    margin-bottom: 60px;
+    flex-wrap: wrap;
+  }
+
+  .robot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .art {
+    white-space: pre;
+    font-weight: 700;
+    color: #4DA6FF;
+    text-shadow: 0 0 12px rgba(77, 166, 255, 0.35);
+    font-size: 36px;
+  }
+
+  .label {
+    font-size: 14px;
+    color: #888;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .pictograph-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-top: 48px;
+    padding: 24px;
+    background: #14171c;
+    border: 1px solid #2a2f37;
+    border-radius: 6px;
+    font-size: 18px;
+    color: #888;
+  }
+
+  .pictograph {
+    color: #4DA6FF;
+    text-shadow: 0 0 10px rgba(77, 166, 255, 0.5);
+    font-size: 32px;
+    font-weight: 700;
+  }
+
+  /* state variants */
+  .ringing .art {
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { color: #4DA6FF; text-shadow: 0 0 12px rgba(77, 166, 255, 0.35); }
+    50% { color: #8EC6FF; text-shadow: 0 0 22px rgba(77, 166, 255, 0.7); }
+  }
+
+  .blocked .art {
+    color: #ff5566;
+    text-shadow: 0 0 12px rgba(255, 85, 102, 0.4);
+  }
+
+  .deferred .art {
+    color: #555a64;
+    text-shadow: none;
+    opacity: 0.7;
+  }
+
+  .credit {
+    margin-top: 80px;
+    color: #666;
+    font-size: 13px;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<h1>BENBOT &mdash; full colour preview</h1>
+
+<div class="row">
+
+  <div class="robot">
+    <div class="art">   ┃
+ ┏━┻━┓
+ ┃□ □┃
+██████┐
+ ▀▀ ▀▀</div>
+    <div class="label">Idle</div>
+  </div>
+
+  <div class="robot ringing">
+    <div class="art">   ┃
+ ┏━┻━┓
+ ┃◉ ◉┃
+██████┐
+ ▀▀ ▀▀</div>
+    <div class="label">Ringing (pulse)</div>
+  </div>
+
+  <div class="robot blocked">
+    <div class="art">   ┃
+ ┏━┻━┓
+ ┃✕ ✕┃
+██████┐
+ ▀▀ ▀▀</div>
+    <div class="label">Blocked</div>
+  </div>
+
+  <div class="robot deferred">
+    <div class="art">   ╎
+ ╶━┻━╴
+ ╎┄ ┄╎
+╶╶╶╶╶╶
+ ╴  ╴</div>
+    <div class="label">Deferred / sleeping</div>
+  </div>
+
+</div>
+
+<div class="pictograph-row">
+  <div>Single-cell pictograph (board scale):</div>
+  <div class="pictograph">⊟</div>
+  <div>=</div>
+  <div class="art" style="font-size: 24px; color: #4DA6FF;">  ┃
+┏┻┓
+┃□┃
+███
+▀ ▀</div>
+</div>
+
+<div class="credit">
+  BENBOT designed by a kid. Switchboard visual line identity.
+</div>
+
+</body>
+</html>

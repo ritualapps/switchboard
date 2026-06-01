@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.env
+.env.*
+.switchboard-test/
+coverage/
+*.tsbuildinfo
+.vscode/
+.idea/
+
+# Vendored reference repos -- local research only, never published
+research/

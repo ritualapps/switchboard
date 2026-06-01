@@ -1,0 +1,4 @@
+# Normalize line endings: store text as LF in the repo, auto-detect binary.
+# Keeps the tree consistent for Linux/macOS contributors regardless of the
+# committer's platform or core.autocrlf setting.
+* text=auto eol=lf

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Switchboard robot family -- full colour preview</title>
+<style>
+  body {
+    background: #0b0d10;
+    color: #d0d0d0;
+    font-family: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 22px;
+    padding: 60px;
+    margin: 0;
+    line-height: 1.05;
+  }
+
+  h1 {
+    font-size: 18px;
+    font-weight: normal;
+    color: #888;
+    letter-spacing: 0.1em;
+    margin: 0 0 60px 0;
+    text-transform: uppercase;
+  }
+
+  h2 {
+    font-size: 14px;
+    font-weight: normal;
+    color: #666;
+    letter-spacing: 0.15em;
+    margin: 80px 0 30px 0;
+    text-transform: uppercase;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px 50px;
+  }
+
+  .robot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 32px 16px;
+    background: #14171c;
+    border: 1px solid #2a2f37;
+    border-radius: 8px;
+    min-height: 360px;
+    justify-content: space-between;
+    position: relative;
+  }
+
+  .slot-num {
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    font-size: 11px;
+    color: #444;
+    letter-spacing: 0.1em;
+  }
+  .slot-num::before { content: "SLOT "; }
+
+  .art {
+    white-space: pre;
+    font-weight: 700;
+    font-size: 26px;
+    line-height: 1.05;
+    text-align: left;
+    display: inline-block;
+  }
+
+  .art-wrap {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .name {
+    font-size: 16px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .pictograph-line {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    font-size: 13px;
+    color: #666;
+    justify-content: center;
+  }
+
+  .pictograph {
+    font-size: 28px;
+    font-weight: 700;
+  }
+
+  .credit {
+    font-size: 12px;
+    color: #555;
+    font-style: italic;
+    text-align: center;
+  }
+
+  .meta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+
+  /* per-robot colours */
+  .widebot    .art, .widebot    .pictograph, .widebot    .name { color: #FF8C42; text-shadow: 0 0 12px rgba(255, 140, 66, 0.30); }
+  .antennabot .art, .antennabot .pictograph, .antennabot .name { color: #FFD43B; text-shadow: 0 0 12px rgba(255, 212, 59, 0.30); }
+  .peakbot    .art, .peakbot    .pictograph, .peakbot    .name { color: #4ADE80; text-shadow: 0 0 12px rgba(74, 222, 128, 0.30); }
+  .spikebot   .art, .spikebot   .pictograph, .spikebot   .name { color: #5DD4FF; text-shadow: 0 0 12px rgba(93, 212, 255, 0.30); }
+  .benbot     .art, .benbot     .pictograph, .benbot     .name { color: #4DA6FF; text-shadow: 0 0 12px rgba(77, 166, 255, 0.30); }
+  .buneebot   .art, .buneebot   .pictograph, .buneebot   .name { color: #B967DB; text-shadow: 0 0 12px rgba(185, 103, 219, 0.30); }
+  .rainbowbot .art, .rainbowbot .pictograph, .rainbowbot .name { color: #FF6FAA; text-shadow: 0 0 12px rgba(255, 111, 170, 0.30); }
+  .eggbot     .art, .eggbot     .pictograph, .eggbot     .name { color: #D87A3D; text-shadow: 0 0 12px rgba(216, 122, 61, 0.30); }
+  .rocketbot  .art, .rocketbot  .pictograph, .rocketbot  .name { color: #D8D8D8; text-shadow: 0 0 12px rgba(216, 216, 216, 0.40); }
+
+  /* rainbow gradient for RainbowBot belly + pictograph */
+  .rainbow-fill {
+    background: linear-gradient(90deg, #ff3b30 0%, #ff9500 18%, #ffcc00 36%, #34c759 54%, #007aff 72%, #af52de 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent !important;
+    text-shadow: none !important;
+    font-weight: 700;
+  }
+
+  .board {
+    background: #14171c;
+    border: 1px solid #2a2f37;
+    border-radius: 8px;
+    padding: 32px 40px;
+    margin-top: 20px;
+    white-space: pre;
+    font-size: 18px;
+    line-height: 1.5;
+  }
+
+  .board .b   { color: #4DA6FF; font-weight: 700; }
+  .board .g   { color: #4ADE80; font-weight: 700; }
+  .board .br  { color: #D87A3D; font-weight: 700; }
+  .board .o   { color: #FF8C42; font-weight: 700; }
+  .board .c   { color: #5DD4FF; font-weight: 700; }
+  .board .y   { color: #FFD43B; font-weight: 700; }
+  .board .s   { color: #D8D8D8; font-weight: 700; }
+  .board .p   { color: #B967DB; font-weight: 700; }
+  .board .rb  {
+    background: linear-gradient(90deg, #ff3b30 0%, #ff9500 25%, #ffcc00 50%, #34c759 75%, #af52de 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 700;
+  }
+  .board .zone { color: #555; letter-spacing: 0.1em; font-size: 14px; }
+  .board .ring { color: #FFA94D; font-weight: 700; }
+  .board .draft { color: #6BC1FF; font-weight: 700; }
+  .board .defer { color: #777; }
+  .board .cap { color: #666; }
+  .board .faded { color: #555; }
+  .board .footer { color: #666; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<h1>Switchboard robot family &mdash; full colour preview</h1>
+
+<div class="grid">
+
+  <div class="robot widebot">
+    <div class="slot-num">1</div>
+    <div class="art-wrap"><div class="art"> ┏━━━━━┓
+─┫□ ⌇ □┣─
+ ┗┳━━━┳┛
+  ▌   ▌  </div></div>
+    <div class="meta">
+      <div class="name">WIDEBOT</div>
+      <div class="pictograph-line"><span class="pictograph">⊠</span><span>orange · tank + mouth</span></div>
+      <div class="credit">a kid</div>
+    </div>
+  </div>
+
+  <div class="robot antennabot">
+    <div class="slot-num">2</div>
+    <div class="art-wrap"><div class="art">  •   •
+  │   │
+ ╭─────╮
+ │ □ □ │
+─┤     ├─
+  ╹   ╹  </div></div>
+    <div class="meta">
+      <div class="name">ANTENNA-BOT</div>
+      <div class="pictograph-line"><span class="pictograph">⌬</span><span>yellow · antennas</span></div>
+      <div class="credit">a kid</div>
+    </div>
+  </div>
+
+  <div class="robot peakbot">
+    <div class="slot-num">3</div>
+    <div class="art-wrap"><div class="art">   ▲
+  ╱─╲
+ ┏━┻━┓
+─┫□ □┣─
+  ▀ ▀  </div></div>
+    <div class="meta">
+      <div class="name">PEAKBOT</div>
+      <div class="pictograph-line"><span class="pictograph">▲</span><span>green · peak</span></div>
+      <div class="credit">a kid</div>
+    </div>
+  </div>
+
+  <div class="robot spikebot">
+    <div class="slot-num">4</div>
+    <div class="art-wrap"><div class="art">  ▴ ▴ ▴
+ ┏━━━━━┓
+─┫ □ □ ┣─
+ ┃     ┃
+ ┗┓   ┏┛
+  ╨   ╨  </div></div>
+    <div class="meta">
+      <div class="name">SPIKEBOT (tbn)</div>
+      <div class="pictograph-line"><span class="pictograph">⩙</span><span>cyan · spiky top</span></div>
+      <div class="credit">a kid</div>
+    </div>
+  </div>
+
+  <div class="robot benbot">
+    <div class="slot-num">5</div>
+    <div class="art-wrap"><div class="art">   ┃
+ ┏━┻━┓
+ ┃□ □┃
+ █████┐
+ ▀▀ ▀▀ </div></div>
+    <div class="meta">
+      <div class="name">BENBOT</div>
+      <div class="pictograph-line"><span class="pictograph">⊟</span><span>blue · top hat</span></div>
+      <div class="credit">a kid</div>
+    </div>
+  </div>
+
+  <div class="robot buneebot">
+    <div class="slot-num">6</div>
+    <div class="art-wrap"><div class="art"> ╭─╮ ╭─╮
+ │ │ │ │
+ │ │ │ │
+ ┴─┴ ┴─┴
+ ┃ □ □ ┃
+─┫     ┣─
+   ╹ ╹   </div></div>
+    <div class="meta">
+      <div class="name">BUNEEBOT</div>
+      <div class="pictograph-line"><span class="pictograph">Ψ</span><span>purple · bunny ears</span></div>
+      <div class="credit">a kid</div>
+    </div>
+  </div>
+
+  <div class="robot rainbowbot">
+    <div class="slot-num">7</div>
+    <div class="art-wrap"><div class="art">   ●   ●
+   │   │
+  ┏━━━━━┓
+  ┃ □ □ ┃
+  ┃  ⌣  ┃
+<span class="rainbow-fill"> ─╱─────╲─
+  ╱─────╲  </span>
+   ▌   ▌   </div></div>
+    <div class="meta">
+      <div class="name">RAINBOWBOT</div>
+      <div class="pictograph-line"><span class="pictograph rainbow-fill">∩</span><span>pink · rainbow belly</span></div>
+      <div class="credit">a kid</div>
+    </div>
+  </div>
+
+  <div class="robot eggbot">
+    <div class="slot-num">8</div>
+    <div class="art-wrap"><div class="art"> ╭───╮
+╱ □ □ ╲┐
+╲     ╱┘
+  ▀ ▀   </div></div>
+    <div class="meta">
+      <div class="name">EGGBOT</div>
+      <div class="pictograph-line"><span class="pictograph">⊙</span><span>brown · side-pod</span></div>
+      <div class="credit">a kid</div>
+    </div>
+  </div>
+
+  <div class="robot rocketbot">
+    <div class="slot-num">9</div>
+    <div class="art-wrap"><div class="art">   ▲
+  ╱─╲
+  │□│
+  │ │
+  │ │
+ ╱│ │╲ </div></div>
+    <div class="meta">
+      <div class="name">ROCKETBOT</div>
+      <div class="pictograph-line"><span class="pictograph">↟</span><span>silver · rocket</span></div>
+      <div class="credit">a kid</div>
+    </div>
+  </div>
+
+</div>
+
+<h2>How they appear on the board &mdash; single-cell pictograph + colour</h2>
+
+<div class="board"><span class="zone">NEEDS YOU</span>
+  <span class="ring">!</span><span class="b">⊟</span>   QAD webhook fix                  agent needs you
+  <span class="ring">!</span><span class="g">▲</span>   Dragrace ad copy                 agent needs you
+  <span class="ring">!</span><span class="s">↟</span>   Deploy v1.0.0                    agent needs you
+
+<span class="zone">READY FOR REVIEW</span>
+   <span class="br">⊙</span> <span class="draft">✎</span>  Presentation generator           2 drafts ready
+   <span class="rb">∩</span> <span class="draft">✎</span>  Launch copy draft                1 draft ready
+
+<span class="zone">RUNNING</span>
+   <span class="o">⊠</span>   Audit V1.0.0                     10s ago             <span class="cap">◐</span>
+   <span class="y">⌬</span>   Repo scan                        30s ago             <span class="cap">◑</span>
+   <span class="c">⩙</span>   Test runner                      45s ago             <span class="cap">◐</span>
+
+<span class="zone">TO DO</span>
+   <span class="p">Ψ</span> <span class="defer">⌛</span>  Domain rename                    until Mon
+
+<span class="zone">INACTIVE</span>
+<span class="faded">   ⌬ ~  Stale session                    idle 4h ago
+   ⊟    Old QAD attempt                  closed yesterday</span>
+
+<span class="footer">  j/k nav · enter drill · h hand back · d defer · q quit · 4 drafts pending</span></div>
+
+<p style="margin-top: 60px; color: #555; font-size: 13px; font-style: italic; text-align: center;">
+Switchboard robot family designed by kids.<br>
+Visual line identity.
+</p>
+
+</body>
+</html>

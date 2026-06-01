@@ -1,0 +1,69 @@
+{
+  "name": "@ritualapps/switchboard",
+  "version": "1.0.0",
+  "description": "Operator's review-and-respond surface for N parallel Claude Code agent lines: walk the board, annotate inline, hand back one reply per line.",
+  "type": "module",
+  "bin": {
+    "switchboard": "bin/switchboard.cjs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "package:check": "npm run typecheck && npm run test && npm run build && npm pack --dry-run",
+    "prepublishOnly": "npm run clean && npm run package:check"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "ink": "^5.1.0",
+    "ink-text-input": "^6.0.0",
+    "nanoid": "^5.0.7",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "@types/react": "^18.3.11",
+    "get-east-asian-width": "^1.6.0",
+    "ink-testing-library": "^4.0.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.3"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "hooks",
+    "skills",
+    "CONTRACTS.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "claude-code",
+    "claude",
+    "agents",
+    "hitl",
+    "supervisor",
+    "switchboard",
+    "cli",
+    "tui",
+    "orchestration"
+  ],
+  "license": "MIT",
+  "author": "Melissa Iverach",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ritualapps/switchboard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ritualapps/switchboard/issues"
+  },
+  "homepage": "https://github.com/ritualapps/switchboard#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}
