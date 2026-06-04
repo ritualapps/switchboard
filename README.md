@@ -1,10 +1,16 @@
 # Switchboard
 
-A terminal dashboard for operators running many Claude Code sessions at once. Switchboard gathers every active session into one board so you can watch progress, see which sessions are waiting on you, review their output, and reply to each one inline without switching terminals.
+A local terminal dashboard for operators running multiple Claude Code sessions.
 
-Each session is a line on the board. When a session needs input or has output to review, its line moves to a priority zone. Open a line, read its latest output under the cursor, attach annotations at the exact point you're reading, then dispatch your replies across every line with one keystroke. The annotation format stays minimal by design: an anchor and your text. No target picker, no priority field, no metadata.
+If you run more than two or three Claude Code sessions at once, you know the tax. You tab between terminals trying to remember which one stopped. You read a session's output, catch something wrong, scroll down to type a correction, and Claude runs off rewriting that one thing while the rest of its output goes stale under the change. Fixing a single item means it needs you again a minute later. You end up holding all of the sessions in your head and can't step away from any of them.
 
-The board stays live while sessions keep working on their own. When you come back, it shows what changed: which lines progressed, which finished, which actually blocked. "Blocked" means one thing here: a session reports `/blocked-on-input` only when it cannot proceed on its own. Routine confirmations are not blocks. Queued tool calls are not blocks.
+That's why I built Switchboard. It puts every running session on one board, one line each. Lines sort themselves into zones based on what needs your attention: NEEDS YOU, READY FOR REVIEW, RUNNING, TO DO. The count of sessions in NEEDS YOU appears in the window title, visible even when Switchboard isn't your focused tab.
+
+When you are ready to review, you select a session to open the content. Your cursor lands on the session's output. The session is paused while you read; nothing is actioned until you've completed your review. As you read you can leave notes inline at the exact places they belong to as each one occurs to you: an idea, a decision, an item for the backlog, a confirmation. When you've read the whole package, `h` stages every note across every line as one bundle, and `/handback` delivers them back to the CC session as a single message. Claude then processes all of it at once.
+
+This also means that you can wander away knowing that Claude will meaningfully progress without you. No more feeding sessions one reply at a time and watching the terminal for its next question. When you come back, you can see at a glance if a session NEEDS YOU, is READY FOR REVIEW, or is still RUNNING.
+
+Switchboard reads the transcript files Claude Code already writes under `~/.claude/`. A session surfaces by declaring what it needs: it writes a small contract file to `~/.switchboard/`, the board polls and renders it. No model decides what deserves your attention. Switchboard runs locally, zero network primitives in the source.
 
 ## Prerequisites
 
@@ -40,7 +46,7 @@ switchboard
 
 Switchboard reads the transcripts Claude Code writes for every session (`~/.claude/projects/<hash>/<session>.jsonl`) and polls `~/.switchboard/` for emission-protocol contracts. Each session becomes a line on the board. Start a Claude Code session in any terminal; it appears on the board within a couple of seconds.
 
-The terminal window title updates to `Switchboard (N)` where `N` is the count of lines in the NEEDS YOU zone, so you can see unread count even when Switchboard isn't your focused tab.
+The terminal window title updates to `Switchboard (N)` where `N` is the count of lines in the NEEDS YOU zone, so you can see how many sessions need you even when Switchboard isn't your focused tab.
 
 ## Key bindings
 
@@ -86,7 +92,7 @@ Switchboard renders agent sessions through a typed emission protocol. Agents dec
 Three base contracts ship at V1 OSS:
 
 - `/ringing`: agent has a question or artefact for review.
-- `/blocked-on-input`: agent is paused waiting on user input (tool approval, external execution).
+- `/blocked-on-input`: agent is paused waiting on input it cannot resolve itself (a tool approval, an external result). Routine confirmations and queued tool calls are not blocks.
 - `/checkpoint`: agent has reached a milestone worth surfacing as RUNNING-zone enrichment.
 
 See [`CONTRACTS.md`](CONTRACTS.md) for the full protocol: shape, write/clear semantics, precedence rules, and how to add new contracts. New contracts are added via reviewed pull requests.
@@ -110,14 +116,14 @@ A proper design doc for V1.x is in flight. Until it lands, candidate shapes are:
 
 1. **Agent-as-watcher.** Add a snippet to your project's `CLAUDE.md` asking Claude to read `~/.switchboard/pickup-*.md` at end-of-turn and act on contents. Starter recipe in [`examples/agent-as-watcher/`](https://github.com/ritualapps/switchboard/tree/main/examples/agent-as-watcher). Covers active sessions; doesn't bootstrap a cold one.
 2. **Long-poll MCP tool + Stop-hook re-enter.** Ship an MCP server whose `await_handback` tool blocks until a pickup lands; the Stop hook returns `block` to keep the turn alive. Bootstraps from one initial prompt, then runs hands-free.
-3. **Switchboard manages CC processes.** Switchboard launches Claude Code via a pty (and offers a `/switchboard-take-over` slash command for handoff from sessions you started yourself). Cleanest unconditional answer; the biggest rebuild.
+3. **Switchboard manages CC processes.** Switchboard launches Claude Code via a pty (and offers a `/switchboard-take-over` slash command for handoff from sessions you started yourself). Cleanest unconditional answer; but means you can't watch the session like you can in a terminal.
 4. **OS-level keystroke injection.** Sends `Enter` to CC's terminal via `SendInput` (Windows) / `cliclick` (macOS) / `ydotool` (Linux). Cross-platform fragile.
 
 If one of these matches how you'd want it solved, drop a thought in [GitHub Discussions](https://github.com/ritualapps/switchboard/discussions) or open a PR into [`examples/`](https://github.com/ritualapps/switchboard/tree/main/examples). Option 1 is the lowest barrier to contribution.
 
 ## Defer
 
-Pressing `D` on a focused line moves it from NEEDS YOU / READY FOR REVIEW to the TO DO zone: single keystroke, no presets, no reason capture. You re-engage a deferred line by plugging into it from the TO DO list (`1`-`9` or Enter once focused). Conditional re-ring (defer-with-intent that auto-resurfaces) is V1.x scope.
+Pressing `D` on a focused line moves it from NEEDS YOU / READY FOR REVIEW to the TO DO zone: You re-engage a deferred line by plugging into it from the TO DO list (`1`-`9` or Enter once focused). Conditional re-ring (defer-with-intent that auto-resurfaces) is V1.x scope.
 
 ## Annotations
 
@@ -129,7 +135,7 @@ You can walk back through your draft annotations after writing them: arrow keys 
 
 ## Platform and surface support
 
-Switchboard reads the standard Claude Code transcript files and hooks. Anything that writes them works. Below is what I've confirmed on real machines so far -- help me fill it in by running Switchboard on your setup and opening an issue with the result, good or bad.
+Switchboard reads the standard Claude Code transcript files and hooks. Anything that writes them works. Below is what I've confirmed on real machines so far. Help me fill it in by running Switchboard on your setup and opening an issue with the result, good or bad.
 
 **Operating systems**
 - **Windows:** verified.
@@ -170,9 +176,7 @@ The emission protocol is built to extend. New contracts beyond the base three la
 
 ## Using Switchboard
 
-Switchboard is free OSS for solo developers and power Claude Code users: you, your team, whoever.
-
-If you'd like to discuss using Switchboard for your organisation's specific workflow, open an issue: https://github.com/ritualapps/switchboard/issues
+Switchboard is free for anyone who orchestrates like I do. MIT, yours. Contributions welcome: open an Issue or send a PR. If you're interested in a custom Switchboard for your org, get in touch at mel@ritualapps.com.au or start a thread in GitHub Discussions: https://github.com/ritualapps/switchboard/discussions
 
 ## License
 
