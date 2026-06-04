@@ -1,6 +1,6 @@
 {
   "name": "@ritualapps/switchboard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Operator's review-and-respond surface for N parallel Claude Code agent lines: walk the board, annotate inline, hand back one reply per line.",
   "type": "module",
   "bin": {

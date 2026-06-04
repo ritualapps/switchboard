@@ -38,7 +38,11 @@ import {
 } from './jsonl-parser.js';
 import { decodeProjectHash, projectLabel } from '../paths.js';
 import { TRUNCATE_MARKER } from '../tui/text.js';
-import { stripTerminalControls } from '../terminal-safe.js';
+import {
+  sanitiseTitle,
+  singleLine,
+  stripTerminalControls,
+} from '../terminal-safe.js';
 import type { Line, LineState, Bundle, CapacitySignals } from '../types.js';
 
 const RECENT_RATE_WINDOW_MS = 5 * 60 * 1000;
@@ -87,14 +91,29 @@ export function reduceLineFromEvents(events: CcEvent[], input: ReduceInput): Lin
   const projectName = projectLabel(input.projectHash);
 
   // Title priority: custom-title (operator's /rename) > ai-title (auto) >
-  // first user prompt > project + session-id fallback.
+  // extracted first user prompt > project + session-id fallback.
+  //
+  // Every candidate flows through `sanitiseTitle` so `Line.title` always
+  // carries a single-line, control-clean, non-empty string <=80 chars (with
+  // width-safe truncation marker). See `src/terminal-safe.ts` for the
+  // boundary contract. This is the invariant that prevents transcript-
+  // derived noise -- terminal escapes (H1 regression), embedded newlines
+  // (multi-line row break), CC slash-command wrapper leakage, future
+  // harness-injected wrapper formats, paste of structured content -- from
+  // reaching the render tree as a title.
   const customTitle = findLatestTitleByType(events, 'custom-title', 'customTitle');
   const aiTitle = findLatestTitleByType(events, 'ai-title', 'aiTitle');
-  const firstUserPrompt = findFirstUserPrompt(events);
+  const rawFirst = findFirstUserPrompt(events);
+  const displayableFirst = rawFirst
+    ? extractDisplayableFirstPrompt(rawFirst)
+    : null;
+  const fallback = `${projectName} (${input.sessionId.slice(0, 8)})`;
   const title =
-    customTitle ??
-    aiTitle ??
-    (firstUserPrompt ? firstUserPrompt.slice(0, 80) : `${projectName} (${input.sessionId.slice(0, 8)})`);
+    sanitiseTitle(customTitle) ??
+    sanitiseTitle(aiTitle) ??
+    sanitiseTitle(displayableFirst) ??
+    sanitiseTitle(fallback) ??
+    '(untitled)';
 
   const startedAt = first.timestamp ?? new Date().toISOString();
   const lastEventAt = last.timestamp ?? startedAt;
@@ -109,15 +128,15 @@ export function reduceLineFromEvents(events: CcEvent[], input: ReduceInput): Lin
 
   const capacitySignals = computeCapacitySignals(events, input.now);
 
-  // Sanitise every transcript-derived string that reaches the render tree:
-  // titles, project labels, and the one-line summary all come from untrusted
-  // transcript content and would otherwise carry terminal escape sequences
-  // straight to stdout. The bundle body/summary are sanitised in buildBundle.
+  // Sanitise every transcript-derived string that reaches the render tree.
+  // Title is already covered above by sanitiseTitle. projectName is single-
+  // lined + control-cleaned so a hostile path can't break row layout. The
+  // bundle body/summary are sanitised in buildBundle.
   return {
     id: input.sessionId,
-    title: stripTerminalControls(title),
+    title,
     projectPath,
-    projectName: stripTerminalControls(projectName),
+    projectName: singleLine(stripTerminalControls(projectName)),
     projectHash: input.projectHash,
     transcriptPath: input.transcriptPath,
     state,
@@ -257,6 +276,85 @@ function findFirstUserPrompt(events: CcEvent[]): string | null {
   return null;
 }
 
+// Claude Code wraps slash-command invocations in a fixed XML envelope before
+// the rendered command body. We see this verbatim in the JSONL transcript:
+//   <command-message>new</command-message>
+//   <command-name>/new</command-name>
+//   <command-args>session args here</command-args>
+//   ...rendered command body...
+// The <command-args> tag is optional -- a bare `/new` (no args) ends after
+// </command-name>. Anchored at start of string so a wrapper appearing
+// mid-prompt cannot match.
+const CC_COMMAND_WRAPPER =
+  /^<command-message>[^<]*<\/command-message>\s*<command-name>(\/[^<\s]+)<\/command-name>(?:\s*<command-args>([^<]*)<\/command-args>)?/;
+
+/**
+ * If `raw` opens with a Claude Code slash-command wrapper, return the
+ * human-readable form "/cmd args" (or "/cmd" when args are absent or empty).
+ * Otherwise return `raw` unchanged.
+ */
+function stripCcCommandWrapper(raw: string): string {
+  const m = raw.match(CC_COMMAND_WRAPPER);
+  if (!m) return raw;
+  const cmd = m[1]!;
+  const args = (m[2] ?? '').trim();
+  return args ? `${cmd} ${args}` : cmd;
+}
+
+// First-char openers we treat as "this is structured content, not a sentence".
+const STRUCTURED_FIRST_CHARS = new Set(['<', '{', '[']);
+
+/**
+ * Walk the input line by line and return the first line that looks like a
+ * human-readable sentence -- not an XML tag, not a JSON-ish opener, not a
+ * code fence, at least 3 chars. Returns null when no such line exists.
+ */
+function firstPlausibleLine(raw: string): string | null {
+  for (const line of raw.split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t) continue;
+    if (STRUCTURED_FIRST_CHARS.has(t[0]!)) continue;
+    if (t.startsWith('```')) continue;
+    if (t.length < 3) continue;
+    return t;
+  }
+  return null;
+}
+
+/**
+ * Extract a displayable title from the raw first-user-prompt content. Three
+ * stages, applied in order:
+ *
+ *   1. Known CC slash-command wrapper -> "/cmd args" (or "/cmd").
+ *   2. Structured-content skip: if the input opens with "<", "{", "[", or a
+ *      code fence, walk the lines for the first plausible sentence. Catches
+ *      future wrapper formats, JSON/code-fence pastes, and any input shape
+ *      where the literal first 80 chars would be noise. Returns null if no
+ *      plausible line exists, falling the title pipeline through to the
+ *      project + sessionId fallback.
+ *   3. Plain text path: return `raw` unchanged. Downstream `sanitiseTitle`
+ *      handles multi-line collapse, length, and control bytes.
+ *
+ * This helper is the only place that knows Claude Code's wire format for
+ * first-prompt content. Adding awareness of future wrappers is a single-file
+ * change here.
+ */
+export function extractDisplayableFirstPrompt(raw: string): string | null {
+  if (!raw) return null;
+
+  const stripped = stripCcCommandWrapper(raw);
+  if (stripped !== raw) return stripped;
+
+  const trimmed = raw.trim();
+  const first = trimmed[0];
+  if (!first) return null;
+  if (STRUCTURED_FIRST_CHARS.has(first) || trimmed.startsWith('```')) {
+    return firstPlausibleLine(raw);
+  }
+
+  return raw;
+}
+
 function findLatestTitleByType(
   events: CcEvent[],
   type: string,
@@ -289,4 +387,11 @@ function truncateOneLine(s: string, n: number): string {
   return oneLine.length > n ? oneLine.slice(0, n - 1) + TRUNCATE_MARKER : oneLine;
 }
 
-export const _internal = { deriveState, deriveLastEventSummary, buildBundle, computeCapacitySignals };
+export const _internal = {
+  deriveState,
+  deriveLastEventSummary,
+  buildBundle,
+  computeCapacitySignals,
+  stripCcCommandWrapper,
+  firstPlausibleLine,
+};
